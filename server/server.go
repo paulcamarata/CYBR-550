@@ -53,7 +53,7 @@ func sF(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
 
 func authS(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
 	ser.WriteToUDP([]byte("PASS_REQ"), remoteaddr)
-	for i := 1; i <= 3; i++ {
+	for i := 0; i <= 1; i++ {
 		_, remoteaddr, err := ser.ReadFromUDP(p)
 		eC(err)
 		input := string(p[:bytes.IndexByte(p, 0)])
