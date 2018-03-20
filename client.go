@@ -7,64 +7,96 @@ import (
 	"log"
 	"net"
 	"os"
+	"time"
 )
 
 var reader = bufio.NewReader(os.Stdin)
-var conn, err = net.Dial("udp", "127.0.0.1:8080")
 
-func auth() {
-	log.Println("true")
-	fmt.Print("Enter password:")
-	resp, err := reader.ReadString('\n')
-	// check for error
+//error checking function, crash on fail
+func eC(err error) {
 	if err != nil {
-		// log error and exit
-		log.Fatalln(err)
-	} else {
-		// strip newline char from resp var
-		resp = resp[:len(resp)-1]
-		buff := []byte(resp)
-		_, err = conn.Write(buff)
-		// call next() method
-		next()
+		log.Fatalln("Fatal error:", err)
 	}
 }
 
-func next() {
-	// do some shit
+//join request function
+func jR(conn net.Conn) {
+	//initialize message to server
+	msg := "JOIN_REQ"
+	buf := []byte(msg)
+
+	//send initial message
+	_, err := conn.Write(buf)
+
+	//check for error
+	eC(err)
+
+	//go to listen on connection function
+	lC(conn)
+}
+
+//listen on connection function
+func lC(conn net.Conn) {
+	//define payload
+	p := make([]byte, 2048)
+
+	for {
+		//get length of payload
+		n, err := conn.Read(p)
+
+		//check for error
+		eC(err)
+
+		//convert payload to string
+		var input = string(p[:bytes.IndexByte(p, 0)])
+
+		log.Println(n) //will be used for parsing bytespace
+
+		if input == "PASS_REQ" {
+			auth(conn)
+		} else {
+			log.Println(input)
+			conn.Close()
+		}
+
+		time.Sleep(time.Second * 1)
+	}
+}
+
+//function to handle cleartext password delivery
+func auth(conn net.Conn) {
+	//prompt for password
+	fmt.Print("Enter password:")
+
+	//read password from stdout
+	resp, err := reader.ReadString('\n')
+
+	//check for error
+	eC(err)
+
+	// strip newline char from resp var
+	resp = resp[:len(resp)-1]
+
+	//convert password to byte array
+	buff := []byte(resp)
+
+	//send password to server
+	_, err = conn.Write(buff)
+
+	//check for error
+	eC(err)
+
+	lC(conn)
+
 }
 
 func main() {
-	p := make([]byte, 2048)
-	if err != nil {
-		log.Fatalln(err)
-	}
+	conn, err := net.Dial("udp", "127.0.0.1:8080")
+	eC(err)
 
-	msg := "JOIN_REQ"
-	buf := []byte(msg)
-	// for {
+	//if all actions complete close connection
+	defer conn.Close()
 
-	_, err = conn.Write(buf)
-	if err != nil {
-		log.Fatalln(err)
-	}
-
-	_, err = bufio.NewReader(conn).Read(p)
-	log.Println(string(p))
-	if err != nil {
-		log.Fatalln(err)
-	}
-	if string(p[:bytes.IndexByte(p, 0)]) == "PASS_REQ" {
-		log.Println("if")
-		auth()
-		// break
-	} else {
-		log.Println("else")
-		log.Fatal("false")
-	}
-	log.Println("code kept executing")
-	// time.Sleep(10 * time.Second)
-	// }
-
-	//  defer conn.Close()
+	//go to join request function
+	jR(conn)
 }
