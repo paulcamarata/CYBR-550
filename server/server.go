@@ -9,10 +9,13 @@ import (
 )
 
 const (
-	Data        uint16 = 5 //because
-	HdrSize     int    = 2
-	PyldLenSize int    = 4
-	PackIDSize  int    = 4
+	JOIN_REQ    string = "1"
+	PASS_REQ    string = "2"
+	PASS_RESP   string = "3"
+	PASS_ACCEPT string = "4"
+	DATA        string = "5"
+	TERMINATE   string = "6"
+	REJECT      string = "7"
 )
 
 var p = make([]byte, 2048)
@@ -34,28 +37,28 @@ func sF(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
 
 	s := string(buf.Bytes())
 	log.Println(s)
-	ser.WriteToUDP([]byte("DATA"), remoteaddr)
+	ser.WriteToUDP([]byte(DATA), remoteaddr)
 
 	ser.WriteToUDP(buf.Bytes(), remoteaddr)
 	defer listenS(ser)
 }
 
 func authS(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
-	ser.WriteToUDP([]byte("PASS_REQ"), remoteaddr)
+	ser.WriteToUDP([]byte(PASS_REQ), remoteaddr)
 	for i := 0; i <= 1; i++ {
 		_, remoteaddr, err := ser.ReadFromUDP(p)
 		eC(err)
 		input := string(p[:bytes.IndexByte(p, 0)])
 		if input == "password" {
-			ser.WriteToUDP([]byte("PASS_ACC"), remoteaddr)
+			ser.WriteToUDP([]byte(PASS_ACCEPT), remoteaddr)
 			log.Println("Password accepted")
 			sF(ser, remoteaddr)
 		} else {
 			log.Println("Bad Password: Attempt", i)
-			ser.WriteToUDP([]byte("PASS_REQ"), remoteaddr)
+			ser.WriteToUDP([]byte(PASS_REQ), remoteaddr)
 		}
 	}
-	ser.WriteToUDP([]byte("REJECT"), remoteaddr)
+	ser.WriteToUDP([]byte(REJECT), remoteaddr)
 	defer listenS(ser)
 }
 
@@ -68,9 +71,9 @@ func listenS(ser *net.UDPConn) {
 		log.Println("rAddr: ", remoteaddr, "payload = ", input)
 
 		switch input {
-		case "JOIN_REQ":
+		case JOIN_REQ:
 			authS(ser, remoteaddr)
-		case "PASS_RESP":
+		case PASS_RESP:
 		default:
 			ser.WriteToUDP([]byte("bad connection"), remoteaddr)
 			log.Println("false")
@@ -80,6 +83,9 @@ func listenS(ser *net.UDPConn) {
 }
 
 func main() {
+	log.Println([]byte(JOIN_REQ))
+	log.Println([]byte(PASS_REQ))
+
 	addr := net.UDPAddr{
 		Port: 8080,
 		IP:   net.ParseIP("127.0.0.1"),
@@ -95,9 +101,11 @@ func main() {
 }
 
 /*
+JOIN_REQ: 1
 PASS_REQ: 2
+PASS_RESP 3
 PASS_ACCEPT: 4
-REJECT: 7
 DATA: 5
 TERMINATE: 6
+REJECT: 7
 */

@@ -11,6 +11,16 @@ import (
 	"time"
 )
 
+const (
+	JOIN_REQ    string = "1"
+	PASS_REQ    string = "2"
+	PASS_RESP   string = "3"
+	PASS_ACCEPT string = "4"
+	DATA        string = "5"
+	TERMINATE   string = "6"
+	REJECT      string = "7"
+)
+
 var reader = bufio.NewReader(os.Stdin)
 
 //error checking function, crash on fail
@@ -23,7 +33,7 @@ func eC(err error) {
 //join request function
 func jR(conn net.Conn) {
 	//initialize message to server
-	msg := "JOIN_REQ"
+	msg := JOIN_REQ
 	buf := []byte(msg)
 
 	//send initial message
@@ -54,13 +64,13 @@ func lC(conn net.Conn) {
 		log.Println(n) //debug for byte array received
 
 		switch input {
-		case "PASS_REQ":
+		case PASS_REQ:
 			auth(conn)
-		case "PASS_ACCEPT":
-		case "REJECT":
+		case PASS_ACCEPT:
+		case REJECT:
 			//		case "DATA":
 
-		case "TERMINATE":
+		case TERMINATE:
 		default:
 			log.Println(input)
 			err := ioutil.WriteFile("./dat1", p, 0644)
