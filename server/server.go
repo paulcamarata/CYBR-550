@@ -34,10 +34,10 @@ func sF(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
 
 	s := string(buf.Bytes())
 	log.Println(s)
+	ser.WriteToUDP([]byte("DATA"), remoteaddr)
 
 	ser.WriteToUDP(buf.Bytes(), remoteaddr)
-
-	listenS(ser)
+	defer listenS(ser)
 }
 
 func authS(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
@@ -67,9 +67,11 @@ func listenS(ser *net.UDPConn) {
 		input := string(p[:bytes.IndexByte(p, 0)])
 		log.Println("rAddr: ", remoteaddr, "payload = ", input)
 
-		if input == "JOIN_REQ" {
+		switch input {
+		case "JOIN_REQ":
 			authS(ser, remoteaddr)
-		} else {
+		case "PASS_RESP":
+		default:
 			ser.WriteToUDP([]byte("bad connection"), remoteaddr)
 			log.Println("false")
 			log.Println("failed: rAddr: ", remoteaddr, "payload = ", input)

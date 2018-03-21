@@ -51,11 +51,17 @@ func lC(conn net.Conn) {
 		//convert payload to string
 		var input = string(p[:bytes.IndexByte(p, 0)])
 
-		log.Println(n) //will be used for parsing bytespace
+		log.Println(n) //debug for byte array received
 
-		if input == "PASS_REQ" {
+		switch input {
+		case "PASS_REQ":
 			auth(conn)
-		} else {
+		case "PASS_ACCEPT":
+		case "REJECT":
+			//		case "DATA":
+
+		case "TERMINATE":
+		default:
 			log.Println(input)
 			err := ioutil.WriteFile("./dat1", p, 0644)
 			eC(err)
@@ -103,8 +109,3 @@ func main() {
 	//go to join request function
 	jR(conn)
 }
-
-/*
-JOIN_REQ: 1
-PASS_RESP: 3
-*/
