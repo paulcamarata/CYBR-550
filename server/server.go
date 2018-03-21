@@ -92,6 +92,10 @@ func main() {
 
 }
 
-//initialize listener? (after fail for example)
-//authloop, client gets 4 tries (handle this better)
-//need help with the file transfer
+/*
+PASS_REQ: 2
+PASS_ACCEPT: 4
+REJECT: 7
+DATA: 5
+TERMINATE: 6
+*/

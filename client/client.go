@@ -103,3 +103,8 @@ func main() {
 	//go to join request function
 	jR(conn)
 }
+
+/*
+JOIN_REQ: 1
+PASS_RESP: 3
+*/
