@@ -2,7 +2,7 @@ package main
 
 import (
 	"bytes"
-	"encoding/binary"
+	"io"
 	"log"
 	"net"
 	"os"
@@ -23,30 +23,19 @@ func eC(err error) {
 		log.Fatalln("Fatal error:", err)
 	}
 }
+
+//send file function
 func sF(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
-	f, err := os.Open("./somefile")
-	defer f.Close()
-	eC(err)
+	buf := bytes.NewBuffer(nil)
+	f, _ := os.Open("./somefile") // Error handling elided for brevity.
+	io.Copy(buf, f)               // Error handling elided for brevity.
+	log.Println(f.Name())
+	f.Close()
 
-	fi, err := f.Stat()
-	eC(err)
+	s := string(buf.Bytes())
+	log.Println(s)
 
-	dat := make([]byte, 1000)
-	s := fi.Size()
-	packID := uint32(0)
-	for i := int64(0); i < s; {
-		n, err := f.Read(dat)
-		eC(err)
-		packLen := HdrSize + PyldLenSize + PackIDSize + n
-		pack := make([]byte, packLen)
-		binary.LittleEndian.PutUint16(pack[0:], Data)
-		binary.LittleEndian.PutUint32(pack[2:], uint32(n))
-		binary.LittleEndian.PutUint32(pack[6:], packID)
-		copy(pack[10:], dat[0:n])
-		ser.WriteToUDP(pack, remoteaddr)
-		i += int64(n)
-		packID++
-	}
+	ser.WriteToUDP(buf.Bytes(), remoteaddr)
 
 	listenS(ser)
 }

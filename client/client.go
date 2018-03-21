@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -56,7 +57,9 @@ func lC(conn net.Conn) {
 			auth(conn)
 		} else {
 			log.Println(input)
-			conn.Close()
+			err := ioutil.WriteFile("./dat1", p, 0644)
+			eC(err)
+
 		}
 
 		time.Sleep(time.Second * 1)
