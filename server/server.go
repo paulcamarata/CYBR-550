@@ -8,17 +8,16 @@ import (
 	"os"
 )
 
-const (
-	JOIN_REQ    string = "1"
-	PASS_REQ    string = "2"
-	PASS_RESP   string = "3"
-	PASS_ACCEPT string = "4"
-	DATA        string = "5"
-	TERMINATE   string = "6"
-	REJECT      string = "7"
+var (
+	JOIN_REQ    string = "JR"
+	PASS_REQ    string = "PQ"
+	PASS_RESP   string = "PR"
+	PASS_ACCEPT string = "PA"
+	DATA        string = "DA"
+	TERMINATE   string = "TE"
+	REJECT      string = "RE"
+	p                  = make([]byte, 2048)
 )
-
-var p = make([]byte, 2048)
 
 //error checking function, crash on fail
 func eC(err error) {
@@ -64,27 +63,25 @@ func authS(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
 
 func listenS(ser *net.UDPConn) {
 	for {
-		_, remoteaddr, err := ser.ReadFromUDP(p)
+		n, remoteaddr, err := ser.ReadFromUDP(p)
 		eC(err)
 
 		input := string(p[:bytes.IndexByte(p, 0)])
-		log.Println("rAddr: ", remoteaddr, "payload = ", input)
+		log.Println("rAddr:", remoteaddr, "payload =", input, "length =", n)
 
-		switch input {
-		case JOIN_REQ:
+		if bytes.HasPrefix([]byte(input), []byte(JOIN_REQ)) {
 			authS(ser, remoteaddr)
-		case PASS_RESP:
-		default:
-			ser.WriteToUDP([]byte("bad connection"), remoteaddr)
-			log.Println("false")
+		} else if bytes.HasPrefix([]byte(input), []byte(PASS_RESP)) {
+			// PASS_ACCEPT()
+		} else {
+			//handle rejection function
+			ser.WriteToUDP([]byte(REJECT), remoteaddr)
 			log.Println("failed: rAddr: ", remoteaddr, "payload = ", input)
 		}
 	}
 }
 
 func main() {
-	log.Println([]byte(JOIN_REQ))
-	log.Println([]byte(PASS_REQ))
 
 	addr := net.UDPAddr{
 		Port: 8080,
@@ -94,18 +91,9 @@ func main() {
 	log.Println("Starting server on", addr)
 	ser, err := net.ListenUDP("udp", &addr)
 	eC(err)
+
+	defer listenS(ser)
+
 	log.Println("Server started successfully")
 
-	listenS(ser)
-
 }
-
-/*
-JOIN_REQ: 1
-PASS_REQ: 2
-PASS_RESP 3
-PASS_ACCEPT: 4
-DATA: 5
-TERMINATE: 6
-REJECT: 7
-*/
