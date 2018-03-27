@@ -22,7 +22,7 @@ var (
 	TERMINATE   string = "TE"
 	REJECT      string = "RE"
 	pload       string = "1111" //padding to meet spec
-	oFile       string
+	oFile       string          //output file
 )
 
 //initialization funcion
@@ -70,7 +70,7 @@ func auth(conn net.Conn) {
 func lC(conn net.Conn) {
 
 	//create byte slice for storing payload
-	p := make([]byte, 2048)
+	p := make([]byte, 1000)
 
 	for {
 		//get length of payload
@@ -79,8 +79,13 @@ func lC(conn net.Conn) {
 		//check for error
 		eC(err)
 
+		//extract header from buffer
 		header := string(p[0:2])
+
+		//extract payload from buffer
 		payload := string(p[2:6])
+
+		//extract content from buffer
 		therest := string(p[6:n])
 
 		/* //Debugging code (comment out when not needed)
@@ -89,18 +94,31 @@ func lC(conn net.Conn) {
 		log.Println(p[0:n]) //debug for content of byte array received
 		*/
 
+		//handle potential cases
 		switch header {
 		case PASS_REQ:
+
+			//go to authentication
 			auth(conn)
+
 		case PASS_ACCEPT:
+
 			//ready to receive data
 			lC(conn)
+
 		case DATA:
+
+			//dynamic payload handler '1111' = data; '1112' = checksum
 			if payload == "1111" {
 
+				//output content to declared file
 				err := ioutil.WriteFile(oFile, p[6:n], 0644)
+
+				//check for error
 				eC(err)
+
 			} else if payload == "1112" {
+
 				//create a new empty buffer
 				buf := bytes.NewBuffer(nil)
 
@@ -124,26 +142,40 @@ func lC(conn net.Conn) {
 				//build an empty buffer
 				buff := []byte{}
 
-				//build checksum
+				//build checksum on locally received flie
 				for i := 1; i < sha1.Size; i++ {
 					buff = append(buff, r[i])
 				}
+
+				//verify checksum on local file matches received checksum
 				if string(buff) == therest {
 
+					//log successful flie transfer and shutdown
 					log.Fatalln("Checksum verified: OK")
+
 				} else {
+
+					//log unsuccessful file transfer and shut down
 					log.Fatalln("Checksum failed: Abort")
 				}
 			}
 
 		case REJECT:
+
+			//password has been rejected
 			log.Println("server rejected password, please try again")
+
+			//return to authentication function
 			auth(conn)
 
 		case TERMINATE:
+
+			//connection terminated
 			log.Fatalln("ABORT")
 		default:
-			log.Println("ABORT")
+
+			//unhandled header
+			log.Fatalln("Unhandled header: ABORT")
 
 		}
 	}

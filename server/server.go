@@ -20,8 +20,8 @@ var (
 	REJECT      string = "RE"
 	epload      string = "1111" //empty payload
 	dpload      string = "1112" //digest payload
-	sPass       string
-	iFile       string
+	sPass       string          //server password
+	iFile       string          //input file
 )
 
 //initialization funcion
@@ -101,46 +101,91 @@ func sF(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
 	defer listenS(ser)
 }
 
+//authentication (server side) function
 func authS(ser *net.UDPConn, remoteaddr *net.UDPAddr) {
-	ser.WriteToUDP([]byte(PASS_REQ+epload), remoteaddr)
-	l := make([]byte, 2048)
 
+	//send PASS_REQ and payload to client
+	ser.WriteToUDP([]byte(PASS_REQ+epload), remoteaddr)
+
+	//create empty 1000 byte splice
+	l := make([]byte, 1000)
+
+	//password attempt loop
 	for i := 1; i < 3; i++ {
+
+		//read from buffer
 		n, remoteaddr, err := ser.ReadFromUDP(l)
+
+		//check for error
 		eC(err)
 
+		//extract header from buffer
 		header := string(l[0:2])
+
+		//extract payload from header
 		password := string(l[6:n])
 
+		//only attempt to authenticate if header is correct
 		if header == PASS_RESP {
+
+			//check password validity
 			if password == sPass {
+
+				//send client password success header
 				ser.WriteToUDP([]byte(PASS_ACCEPT+epload), remoteaddr)
+
+				//authentication successful server side log statement
 				log.Println("Password accepted", "Password attempt #", i)
+
+				//go to send file function
 				sF(ser, remoteaddr)
+
 			} else {
+
+				//authentication failure server side log statement
 				log.Println("Bad Password: Attempt #", i)
+
+				//send client password rejection header
 				ser.WriteToUDP([]byte(REJECT+epload), remoteaddr)
 			}
 		} else {
-			//handle termination unhandled message
+			//unnhandled header
+			log.Fatal("Unhandled header: ABORT")
 		}
 	}
+
+	//if three bad passwords, send TERMINATE header
 	ser.WriteToUDP([]byte(TERMINATE+epload), remoteaddr)
+
+	//last action, return to listening state
 	defer listenS(ser)
 }
 
+//listen and wait function
 func listenS(ser *net.UDPConn) {
+
+	//listener loop
 	for {
-		p := make([]byte, 2048)
+
+		//create a 100 byte buffer
+		p := make([]byte, 1000)
+
+		//read buffer
 		n, remoteaddr, err := ser.ReadFromUDP(p)
+
+		//check for error
 		eC(err)
+
+		//extract header from buffer
 		header := string(p[0:2])
 
+		//total input from buffer
 		input := string(p[:bytes.IndexByte(p, 0)])
 
 		//Server side logging statement
 		log.Println("rAddr:", remoteaddr, "payload =", input, "length =", n)
 
+		//handle potential cases
 		switch header {
 		case JOIN_REQ:
 			//handle join request
